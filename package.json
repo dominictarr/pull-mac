@@ -1,6 +1,6 @@
 {
   "name": "pull-mac",
-  "description": "",
+  "description": "authenticate & verify a binary pull-stream",
   "version": "0.0.0",
   "homepage": "https://github.com/dominictarr/pull-mac",
   "repository": {

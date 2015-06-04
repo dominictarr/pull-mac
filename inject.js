@@ -33,8 +33,10 @@ module.exports = function (sodium, exports) {
     header.writeUInt32BE(count, 2)
 
     //write the hash of the chunk
-    hash(chunk).copy(header, 6, 0, HASH_LEN)
-
+    if(chunk.length !== 0)
+      hash(chunk).copy(header, 6, 0, HASH_LEN)
+    else
+      header.fill(0, 6, 6+HASH_LEN)
     // authenticate the hash, length, count.
     auth(header.slice(0, AUTHED_LEN), secret)
       .copy(header, AUTHED_LEN, 0, HASH_LEN)
@@ -72,23 +74,40 @@ module.exports = function (sodium, exports) {
         this.queue(createHeader(chunks[j], i++, secret))
         this.queue(chunks[j])
       }
+    }, function (err) {
+      // if it was an error, hangup immediately.
+      // this will become an verification error.
+      console.log('AUTH END', err)
+      if(err) this.queue(null)
+
+      else {
+        this.queue(createHeader(new Buffer(0), i++, secret))
+        this.queue(null)
+      }
     })
   }
 
   exports.createVerifyStream = function (secret) {
-    var reader = Reader(), i = 0
+    var reader = Reader(), i = 0, ended = false
     return function (read) {
       reader(read)
       return function (abort, cb) {
+        if(ended) return cb(ended)
         reader.read(HEADER_LEN, function (err, header) {
-          if(err) return cb(err)
+          if(err === true) return cb(new Error('unexpected hangup'))
+            
+          if(err) return cb(ended = err)
           var parsed
           try {
             parsed = verifyHeader(header, i++, secret)
           } catch (err) {
-            return cb(err)
+            return cb(ended = err)
           }
+          if(parsed.length === 0)
+            return cb(ended = true)
+
           reader.read(parsed.length, function (err, data) {
+            if(err === true) return cb(new Error('unexpected hangup'))
             if(err) return cb(err)
             if(!deepEqual(hash(data), parsed.hash))
               return cb(Error('flipped bits in body'))

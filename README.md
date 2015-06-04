@@ -69,6 +69,11 @@ If any bits where flipped then a mac error will be detected.
 The header and the following chunk can then be sent.
 The counter is incremented for the next chunk.
 
+When the input ends, one last header must be written,
+except the length will be zero, and the hash is set to zeros.
+This means that if an attacker terminates the connection,
+that situation can be distinguished from a correctly ended stream.
+
 ### Verification
 
 read 70 bytes from the input to get the authenticated header,

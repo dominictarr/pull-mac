@@ -93,3 +93,27 @@ tape('protect against reordering', function (t) {
     })
   )
 })
+
+tape('detect a premature hangup', function (t) {
+
+  var input = [
+    new Buffer('I <3 TLS\n'),
+    new Buffer('...\n'),
+    new Buffer("NOT!!!")
+  ]
+
+  var key = crypto.randomBytes(32)
+
+  pull(
+    pull.values(input),
+    mac.createAuthStream(key),
+    pull.take(4), //header packet header packet.
+    mac.createVerifyStream(key),
+    pull.collect(function (err, data) {
+      console.log(err)
+      t.ok(err) //expects an error
+      t.equal(data.join(''), 'I <3 TLS\n...\n')
+      t.end()
+    })
+  )
+})

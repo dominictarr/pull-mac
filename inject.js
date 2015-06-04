@@ -5,6 +5,12 @@ var split = require('split-buffer')
 var through = require('pull-through')
 
 
+function isZeros (buffer) {
+  for(var i = 0; i < buffer.length; i++)
+    if(buffer[i] !== 0) return false
+  return true
+}
+
 module.exports = function (sodium, exports) {
 
   exports = exports || {}
@@ -95,7 +101,6 @@ module.exports = function (sodium, exports) {
         if(ended) return cb(ended)
         reader.read(HEADER_LEN, function (err, header) {
           if(err === true) return cb(new Error('unexpected hangup'))
-            
           if(err) return cb(ended = err)
           var parsed
           try {
@@ -103,7 +108,7 @@ module.exports = function (sodium, exports) {
           } catch (err) {
             return cb(ended = err)
           }
-          if(parsed.length === 0)
+          if(parsed.length === 0 && isZeros(parsed.hash))
             return cb(ended = true)
 
           reader.read(parsed.length, function (err, data) {
